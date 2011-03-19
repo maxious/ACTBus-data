@@ -1,0 +1,9 @@
+options:
+  start_date: 20101115
+  end_date: 20111231
+  remove_date: 20111231
+  agency_name: ACT Internal Omnibus Network (ACTION)
+  agency_url: http://www.action.act.gov.au/ 
+  agency_timezone: Australia/Sydney
+  agency_phone: 131710
+  agency_lang: en

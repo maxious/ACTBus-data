@@ -1,0 +1,1 @@
+grep .pdf *oute*.htm | perl -0ne 'print "$1\n" while (/<a\s*href\s*=\s*\"(.*?)\">.*?<\/a>/igs)' | sed 's/" target="_blank//g' | sed 's/\.\.\///g' | xargs -Ifile wget -c http://www.action.act.gov.au/Routes_101001/file
