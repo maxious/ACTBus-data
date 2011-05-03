@@ -1,8 +1,8 @@
 default: cbrfeed.zip
 
-cbrfeed.zip: cbrtable.yml createfeed.py
+cbrfeed.zip: cbrtable.yml 07-createfeed.py
 	sh 06-cleanupyaml.sh
-	./createfeed.py --input=cbrtable.yml --output=cbrfeed.zip
+	./07-createfeed.py --input=cbrtable.yml --output=cbrfeed.zip
 
 cbrtable.yml: cbrtable.yml.in indent-route.pl
 	cp cbrtable.yml.in cbrtable.yml

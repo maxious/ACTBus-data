@@ -10,11 +10,11 @@ class Array
 end
 
 
-def makeTimetable(table, period, short_name)
-	timetable = {"between_stops" => [], "short_name" => short_name}
+def makeTimetable(table, period, short_name, pdf_url)
+	timetable = {"between_stops" => [], "short_name" => short_name, "route_url" => pdf_url}
 	time_points = table.xpath('tr[1]//th').map do |tp|
 		if tp.content != "\302\240" && tp.content != "" && tp.content != "<br/>"
-			timing_point = tp.content.squeeze(" ").gsub("Shops"," ").gsub("Bus Station"," Bus Station ").gsub("Interchange"," Bus Station ").gsub(" Platform"," (Platform")
+			timing_point = tp.content.squeeze(" ").gsub("Shops"," ").gsub("Bus Station"," Bus Station ").gsub("Interchange"," Bus Station ").gsub(" Platform"," (Platform").gsub("StationPlatform","Station (Platform")
 			timing_point = timing_point.gsub("Machonochie","Maconochie").gsub("Hume"," ").gsub("Market Place","Marketplace").gsub("Terminus Fyshwick","Terminus")
 			timing_point = timing_point.gsub("  - "," - ").gsub("\n"," ").gsub("\r"," ").gsub("\t"," ").gsub("\\"," / ").gsub("/"," / ").gsub(","," ").gsub("\302\240","").squeeze(" ").strip
 			if (short_name == "923" or short_name == "924" or short_name == "938") and timing_point == "Pearce"
@@ -36,11 +36,11 @@ def makeTimetable(table, period, short_name)
 	table.css('tr').each do |row|
 		times = row.css('td').map do |cell|
 			time = cell.content.squeeze(" ").strip
-			time = time.gsub(/ *A\S?M/,"a").gsub(/ ?P\S?M/,"p").gsub(/ *a\S?m/,"a").gsub(/ ?p\S?m/,"p")
+			time = time.gsub(/ *A\S?M/,"a").gsub(/ ?P\S?M/,"p").gsub(/ ?P\S?m/,"p").gsub(/ *a\S?m/,"a").gsub(/ ?p\S?m/,"p")
 			time = time.gsub("12:08 AM","1208x").gsub(":","").gsub("1.","1").gsub("2.","2").gsub("3.","3").gsub("4.","4")
 			time = time.gsub("5.","5").gsub("6.","6").gsub("7.","7").gsub("8.","8").gsub("9.","9").gsub("10.","10")
 			time = time.gsub("11.","11").gsub("12.","12").gsub(/\.+/,"-").gsub("\302\240","")
-			if time == "" or time.include? "chool" or time.include? "On Race Days" or time.include? "Bus"
+			if time == "" or time.include? "chool" or time.include? "On Race Days" or time.include? "Bus" or time.include? "l" 
 				time = nil # This hacky way is faster than using position()>1 xpath on <TD>s!
 			end 
 			time
@@ -80,37 +80,45 @@ Dir.glob("source-html/*oute*.htm*") { |file|
 		raise "Route number(s) not found in <title> tag"
 	end
 
+	pdf_url = "";
+	doc.xpath('//a[text()="View timetable and map"]').each do |pdf|
+		pdf_url = "http://www.action.act.gov.au/Routes_101001/" + pdf['href']
+	end
+	if pdf_url == ""
+		raise "PDF Timetable/map not found"
+	end
+
 	doc.xpath('//table[preceding::text()="Weekdays"]').each do |table|
-		timetables << makeTimetable(table, "stop_times", short_name)
+		timetables << makeTimetable(table, "stop_times",short_name, pdf_url)
 	end
 	doc.xpath('//table[preceding::text()="This timetable is effective from Monday 15th November 2010."]').each do |table|
 		if short_name[0].chr != "9" or short_name.size == 1
-		  timetables << makeTimetable(table, "stop_times", short_name)
+		  timetables << makeTimetable(table, "stop_times",short_name, pdf_url)
 		end
 	end
 	#all tables are weekdays on some really malformatted timetables
 	if short_name == "170"
 		doc.xpath('//table').each do |table|
-			timetables << makeTimetable(table, "stop_times", short_name)
+			timetables << makeTimetable(table, "stop_times",short_name, pdf_url)
 		end
 	end
 	#weekends
 	doc.xpath('//table[preceding::text()="Saturdays" and following::a]').each do |table|
-		timetables << makeTimetable(table, "stop_times_saturday", short_name)
+		timetables << makeTimetable(table, "stop_times_saturday",short_name, pdf_url)
 	end
 	doc.xpath('//table[preceding::text()="Sundays"]').each do |table|
-		timetables << makeTimetable(table, "stop_times_sunday",  short_name)
+		timetables << makeTimetable(table, "stop_times_sunday", short_name, pdf_url)
 	end
 	#930/934 special cases
 	doc.xpath('//table[preceding::text()="Saturday" and following::h2]').each do |table|
-		timetables << makeTimetable(table, "stop_times_saturday", short_name)
+		timetables << makeTimetable(table, "stop_times_saturday",short_name, pdf_url)
 	end
 	doc.xpath('//table[preceding::text()="Sunday"]').each do |table|
-		timetables << makeTimetable(table, "stop_times_sunday",  short_name)
+		timetables << makeTimetable(table, "stop_times_sunday", short_name, pdf_url)
 	end
 	#route 81 = Weekdays - School Holidays Only 
 	doc.xpath('//table[preceding::text()="Weekdays - School Holidays Only "]').each do |table|
-		timetable = makeTimetable(table, "stop_times", short_name)
+		timetable = makeTimetable(table, "stop_times",short_name, pdf_url)
 		#TODO set active date range to only be holidays
 		timetables << timetable;
 	end

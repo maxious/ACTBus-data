@@ -108,6 +108,7 @@ def AddTripsToSchedule(schedule, route, routedata, service_id, stop_times):
 
   for trip in stop_times:
     t = route.AddTrip(schedule, headsign=routedata['long_name'], service_period=service_period)
+    t.shape_id = routedata['short_name'] + routedata['long_name'] + "shape"
 
     if len(trip) > len(routedata['time_points']):
         print "Length of trip (%s) exceeds number of time points (%s)!" % (len(trip), len(routedata['time_points']))
@@ -141,6 +142,7 @@ def AddTripsToSchedule(schedule, route, routedata, service_id, stop_times):
           pass
         else:
           class InvalidStopTimeError(Exception): pass
+	  print routedata
           raise InvalidStopTimeError, 'Bad stoptime "%s"' % stop_time
         i = i + 1
 
@@ -165,6 +167,7 @@ def AddRouteToSchedule(schedule, routedata):
   r = schedule.AddRoute(short_name=str(routedata['short_name']), 
                         long_name=routedata['long_name'],
                         route_type='Bus')
+  r.route_url = routedata['route_url']
   if routedata.get('stop_times'):
     AddTripsToSchedule(schedule, r, routedata, "weekday", routedata['stop_times'])
   if routedata.get('stop_times_saturday'):
