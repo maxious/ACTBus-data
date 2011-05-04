@@ -88,7 +88,7 @@ def PruneStops(stopsdata, routedata):
 
 def AddStops(schedule, stopsdata):
   for stopdata in stopsdata:
-    stop_code = stopdata['stop_code']
+    stop_code = stopdata['stop_code'].strip()
     # we have to manually add the stop instead of using AddStop, cause 
     # we want the stop_code
     stop_id = unicode(len(schedule.stops))
@@ -108,7 +108,7 @@ def AddTripsToSchedule(schedule, route, routedata, service_id, stop_times):
 
   for trip in stop_times:
     t = route.AddTrip(schedule, headsign=routedata['long_name'], service_period=service_period)
-    t.shape_id = routedata['short_name'] + routedata['long_name'] + "shape"
+    t.shape_id = str(routedata['short_name']) + routedata['long_name'] + "shape"
 
     if len(trip) > len(routedata['time_points']):
         print "Length of trip (%s) exceeds number of time points (%s)!" % (len(trip), len(routedata['time_points']))
@@ -140,15 +140,18 @@ def AddTripsToSchedule(schedule, route, routedata, service_id, stop_times):
           trip_stops.append((seconds, routedata['time_points'][i]) )  
         elif re.search(r'^\-$', str(stop_time)):
           pass
-        else:
+        elif str(stop_time) == "[None]":
+          pass
+	else:
           class InvalidStopTimeError(Exception): pass
-	  print routedata
+	  print trip
           raise InvalidStopTimeError, 'Bad stoptime "%s"' % stop_time
         i = i + 1
 
     trip_stops.sort()  # Sort by time
     prev_stop_code = None
     between_stops = routedata.get('between_stops')
+    shape_dist = routedata.get('stop_distance')
 
     for (time, stop_code) in trip_stops:      
       if prev_stop_code and between_stops:
@@ -157,12 +160,21 @@ def AddTripsToSchedule(schedule, route, routedata, service_id, stop_times):
           for between_stop_code in between_stop_list:          
             t.AddStopTime(stop=stops[between_stop_code]) 
       #print stop_code + routedata['short_name']
-      t.AddStopTime(stop=stops[stop_code], arrival_secs=time,
-                    departure_secs=time)
+      stop_code = stop_code.strip()
+      if shape_dist != None and stop_code in shape_dist:
+	t.AddStopTime(stop=stops[stop_code], arrival_secs=time,
+		      departure_secs=time, shape_dist_traveled=shape_dist[stop_code])
+      else:
+	t.AddStopTime(stop=stops[stop_code], arrival_secs=time,	departure_secs=time)
       prev_stop_code = stop_code
 
+def AddRouteShapeToSchedule(schedule, routedata):
+    if 'shape' in routedata:
+      shape = transitfeed.Shape(str(routedata['short_name'])+routedata['long_name']+"shape")
+      for point in routedata['shape']:
+          shape.AddPoint(float(point['lat']), float(point['lng']), point['sequence'], float(point['distance']))
+      schedule.AddShapeObject(shape)
 
-    
 def AddRouteToSchedule(schedule, routedata):
   r = schedule.AddRoute(short_name=str(routedata['short_name']), 
                         long_name=routedata['long_name'],
@@ -185,13 +197,22 @@ def main():
   (options, args) = parser.parse_args()
 
   schedule = transitfeed.Schedule()
+  if options.input == None:
+    raise ValueError("Input filename must be specified as command line argument")
+  else:
+    print "Loading %s ..." % options.input
   stream = open(options.input, 'r')
   data = yaml.load(stream)
+  print "Loading feed/agency options"
   ProcessOptions(schedule, data['options'])
+  print "Pruning unused stops"
   PruneStops(data['stops'], data['routes'])
+  print "Adding stops"
   AddStops(schedule, data['stops'])
 
+  print "Adding routes and route times"
   for route in data['routes']:
+    AddRouteShapeToSchedule(schedule, route)
     AddRouteToSchedule(schedule, route)
 
   schedule.WriteGoogleTransitFeed(options.output)
