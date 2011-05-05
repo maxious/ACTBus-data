@@ -9,21 +9,20 @@ class Array
   end
 end
 
-
 def makeTimetable(table, period, short_name, pdf_url)
 	timetable = {"between_stops" => [], "short_name" => short_name, "route_url" => pdf_url}
 	time_points = table.xpath('tr[1]//th').map do |tp|
 		if tp.content != "\302\240" && tp.content != "" && tp.content != "<br/>"
 			timing_point = tp.content.squeeze(" ").gsub("Shops"," ").gsub("Bus Station"," Bus Station ").gsub("Interchange"," Bus Station ").gsub(" Platform"," (Platform").gsub("StationPlatform","Station (Platform")
 			timing_point = timing_point.gsub("Machonochie","Maconochie").gsub("Hume"," ").gsub("Market Place","Marketplace").gsub("Terminus Fyshwick","Terminus")
-			timing_point = timing_point.gsub("  - "," - ").gsub("\n"," ").gsub("\r"," ").gsub("\t"," ").gsub("\\"," / ").gsub("/"," / ").gsub(","," ").gsub("\302\240","").squeeze(" ").strip
+			timing_point = timing_point.gsub("  - "," - ").gsub("\n"," ").gsub("\r"," ").gsub("\t"," ").gsub("\\"," / ").gsub("/"," / ").gsub(","," ").gsub("*","").gsub("\302\240","").squeeze(" ").strip
 			if (short_name == "923" or short_name == "924" or short_name == "938") and timing_point == "Pearce"
 			  timing_point = "Canberra Hospital"
 			end
 			if (tp.content.match('Platform'))
 			  timing_point.concat(")")
 			end
-			if tp.to_s.match(/[0-9][0-9][0-9]/) or tp.to_s.include? "Wheelchair"
+			if tp.to_s.match(/[0-9][0-9][0-9]/) or tp.to_s.include? "Wheelchair" or timing_point == ""
 			  timing_point = nil
 			end
 			timing_point
@@ -34,6 +33,7 @@ def makeTimetable(table, period, short_name, pdf_url)
 	timetable["long_name"] = "To " + time_points.last
 	periodtimes = []
 	table.css('tr').each do |row|
+	
 		times = row.css('td').map do |cell|
 			time = cell.content.squeeze(" ").strip
 			time = time.gsub(/ *A\S?M/,"a").gsub(/ ?P\S?M/,"p").gsub(/ ?P\S?m/,"p").gsub(/ *a\S?m/,"a").gsub(/ ?p\S?m/,"p")
@@ -46,17 +46,50 @@ def makeTimetable(table, period, short_name, pdf_url)
 			time
 		end
 		times.delete(nil)
-		if not times.empty? 
-			if not (route = times.shift)
-				raise("TODO: account for shifting route numbers eg. intertown/redex 62/162")
+		if not times.empty?
+			triproute = times.shift; # strip first column as route number
+			if (triproute == short_name or triproute.start_with? short_name or triproute.end_with? short_name or short_name.start_with? triproute or short_name.end_with? " "+triproute or triproute.end_with? "s" or triproute.end_with? "a" or triproute.end_with? "x" or triproute.end_with? "y" or triproute.end_with? "r")
+			  periodtimes << times.to_a
+			else
+			  if not (triproute == "Notes" or triproute == "s" or triproute == "S" or triproute == "a" or triproute == "x" or triproute == "y" or triproute == "r" or short_name == "300")
+			    print short_name + " != " + triproute +"\n"
+			   raise("TODO: shifting route numbers should only appear on 300 timetable")
+			  end
 			end
-			periodtimes << times.to_a
+			
 		end
 	end
 	if periodtimes.size < 1
 		raise "No times for route " + short_name + " in period " + period
 	end
 	timetable[period] = periodtimes.to_a
+	
+	timetable["route_text_color"] = "000000"
+	timetable["route_color"] = case timetable["short_name"]
+	when /1? 31?/
+	  timetable["route_text_color"] = "FFFFFF"
+	  "00009C" #blue rapid
+	when "900"
+	  timetable["route_text_color"] = "FFFFFF"
+	  "00009C" #blue rapid
+	when "300"
+	  timetable["route_text_color"] = "FFFFFF"
+	  "00009C" #blue rapid
+	when "200"
+	  "FF2400" #red rapid
+	when "2" 
+	  "D9D919" #gold line
+	when "3"
+	  "D9D919" #gold line
+	when "4" 
+	  "32CD32" #green line
+	when  "5"
+	  "32CD32" #green line
+	when /7??/
+	  "845730" #Xpresso line
+	else
+	  "FFFFFF" #default white
+	end
 	# pp timetable
 	filename = timetable["short_name"] + "-" + timetable["long_name"]+ "." + period + ".yml"
 	filename = filename.downcase.gsub(" ","-").gsub("/","-").gsub("(","").gsub(")","")
@@ -74,7 +107,7 @@ Dir.glob("source-html/*oute*.htm*") { |file|
 	timetables = []
 	short_name = "";
 	doc.xpath('//title').each do |title|
-		short_name = title.content.gsub("Route_","").gsub("Route ","").gsub("route ","").gsub(", ","/").gsub("ACTION Buses Timetable for ","").squeeze(" ").strip
+		short_name = title.content.gsub("Route_","").gsub("Route ","").gsub("Series","").gsub("route ","").gsub(", ","/").gsub("ACTION Buses Timetable for ","").squeeze(" ").strip
 	end
 	if short_name == ""
 		raise "Route number(s) not found in <title> tag"

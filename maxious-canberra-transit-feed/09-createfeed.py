@@ -108,7 +108,8 @@ def AddTripsToSchedule(schedule, route, routedata, service_id, stop_times):
 
   for trip in stop_times:
     t = route.AddTrip(schedule, headsign=routedata['long_name'], service_period=service_period)
-    t.shape_id = (str(routedata['short_name']) + routedata['long_name'] + "shape").replace(" ","")
+    if 'route_shape_id' in routedata:
+      t.shape_id = routedata['route_shape_id']
 
     if len(trip) > len(routedata['time_points']):
         print "Length of trip (%s) exceeds number of time points (%s)!" % (len(trip), len(routedata['time_points']))
@@ -171,6 +172,7 @@ def AddTripsToSchedule(schedule, route, routedata, service_id, stop_times):
 def AddRouteShapeToSchedule(schedule, routedata):
     if 'shape' in routedata:
       shape = transitfeed.Shape(str(routedata['short_name'])+routedata['long_name']+"shape")
+      routedata['route_shape_id'] = shape.shape_id
       for point in routedata['shape']:
           shape.AddPoint(float(point['lat']), float(point['lng']), point['sequence'], float(point['distance']))
       schedule.AddShapeObject(shape)
@@ -180,6 +182,9 @@ def AddRouteToSchedule(schedule, routedata):
                         long_name=routedata['long_name'],
                         route_type='Bus')
   r.route_url = routedata['route_url']
+  r.route_color = routedata['route_color']
+  r.route_text_color = routedata['route_text_color']
+  
   if routedata.get('stop_times'):
     AddTripsToSchedule(schedule, r, routedata, "weekday", routedata['stop_times'])
   if routedata.get('stop_times_saturday'):

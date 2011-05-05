@@ -22,6 +22,7 @@ end
 def correctTimePoints()
 time_point_corrections = {"North Lynehamham" => "North Lyneham",
  "Woden Bus Station Platform 10)" => "Woden Bus Station (Platform 10)",
+ "Westfield Bus Station Platfrom 1" => "Westfield Bus Station (Platform 1)",
  "Saint AndrewsVillage Hughes"=>"Saint Andrews Village Hughes",
  "Flemmington Road / Sandford St"=>"Flemington Road / Sandford St",
  "City Interchange"=>"City Bus Station",
