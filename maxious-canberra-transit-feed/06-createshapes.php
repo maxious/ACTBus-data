@@ -46,7 +46,7 @@ if ($dhandle) {
 			$timetable["stop_distance"] = Array();
 			$distanceSum = 0.0;
 			$sequenceSum = 0;
-			$shape_id = $timetable["short_name"] . $timetable["long_name"] . "shape";
+			$shape_id = str_replace(" ","",($timetable["short_name"] . $timetable["long_name"] . "shape"));
                         echo "Processing shape $shape_id ... <br> \n";
 			foreach ($timetable["time_points"] as $timePoint) {
 				$curTimePoint = preg_replace("/\(Platform.*/", "", $timePoint);

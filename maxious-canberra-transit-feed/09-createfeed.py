@@ -108,7 +108,7 @@ def AddTripsToSchedule(schedule, route, routedata, service_id, stop_times):
 
   for trip in stop_times:
     t = route.AddTrip(schedule, headsign=routedata['long_name'], service_period=service_period)
-    t.shape_id = str(routedata['short_name']) + routedata['long_name'] + "shape"
+    t.shape_id = (str(routedata['short_name']) + routedata['long_name'] + "shape").replace(" ","")
 
     if len(trip) > len(routedata['time_points']):
         print "Length of trip (%s) exceeds number of time points (%s)!" % (len(trip), len(routedata['time_points']))
