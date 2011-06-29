@@ -116,6 +116,7 @@ Dir.glob("source-html/*oute*.htm*") { |file|
 	pdf_url = "";
 	doc.xpath('//a[text()="View timetable and map"]').each do |pdf|
 		pdf_url = "http://www.action.act.gov.au/Routes_101001/" + pdf['href']
+		pdf_url = pdf_url.gsub("\n","").gsub("\r","").gsub("\t","")
 	end
 	if pdf_url == ""
 		raise "PDF Timetable/map not found"

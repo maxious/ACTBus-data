@@ -85,7 +85,7 @@
           if (!$result) {
               echo("Error in SQL query: " . pg_last_error() . "<br>\n");
           }
-	  echo "updated ".$outdatedroute['fromlocation']."->".$outdatedroute['tolocation']."<br>";
+	  echo "updated ".$outdatedroute['fromlocation']."->".$outdatedroute['tolocation']." (".$outdatedroute['routes'].")<br>";
           $updatedroutes++;
       }
       echo "updated $updatedroutes routes<br>";

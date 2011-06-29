@@ -10,7 +10,10 @@ function init()
     // create the ol map object
     var map = new OpenLayers.Map('map');
     
-  var osmtiles = new OpenLayers.Layer.OSM("local", "/tiles/${z}/${x}/${y}.png")
+     var osmtiles = new OpenLayers.Layer.OSM("cloudmade", "http://b.tile.cloudmade.com/daa03470bb8740298d4b10e3f03d63e6/1/256/${z}/${x}/${y}.png")
+var nearmap = new OpenLayers.Layer.OSM.NearMap("NearMap");
+
+ // var osmtiles = new OpenLayers.Layer.OSM("local", "/tiles/${z}/${x}/${y}.png")
 // use http://open.atlas.free.fr/GMapsTransparenciesImgOver.php and http://code.google.com/p/googletilecutter/ to make tiles
     markers = new OpenLayers.Layer.Markers("Between Stop Markers");
  
@@ -51,35 +54,36 @@ OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
                 map.addControl(click);
                 click.activate();
 <?php
-  $conn = pg_connect("dbname=bus user=postgres password=snmc");
-  if (!$conn) {
-      echo "An error occured.\n";
-      exit;
-  }
-  $result_stops = pg_query($conn, "Select * FROM stops");
-  
-  while ($stop = pg_fetch_assoc($result_stops)) {
-      echo 'marker = new OpenLayers.Marker(new OpenLayers.LonLat(' . ($stop['lng'] / 10000000) . "," . ($stop['lat'] / 10000000) . ')
+$conn = pg_connect("dbname=bus user=postgres password=snmc");
+if (!$conn) {
+	echo "An error occured.\n";
+	exit;
+}
+$result_stops = pg_query($conn, "Select * FROM stops");
+while ($stop = pg_fetch_assoc($result_stops)) {
+
+	echo 'marker = new OpenLayers.Marker(new OpenLayers.LonLat(' . ($stop['lng'] / 10000000) . "," . ($stop['lat'] / 10000000) . ')
             .transform(
             new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
             new OpenLayers.Projection("EPSG:900913") // to Spherical Mercator Projection
             ));';
-      
-      echo '
+	echo '
             marker.id="' . $stop['geohash'] . '";
             markers.addMarker(marker);
 marker.events.register("mousedown", marker, function() {
 
 document.getElementById("between_points").innerHTML += this.id+";";
+document.getElementById("between_points").innerValue += this.id+";";
+document.getElementById("response").innerHTML += this.id+";";
 $(\'form input[name="oldgeopo"]\').val(this.id);
 });
 ';
-  }
+}
 ?>
 var timeicon = new OpenLayers.Icon("icong.png",new OpenLayers.Size(16,16));
 var timepoints = new OpenLayers.Layer.GeoRSS("Timing Points", "displaytimepoints.georss.php", { icon: timeicon });
 
-            map.addLayers([osmtiles, markers,timepoints]);
+            map.addLayers([osmtiles, nearmap, markers,timepoints]);
             map.addControl(new OpenLayers.Control.LayerSwitcher());
       map.zoomToExtent(markers.getDataExtent());
  }
@@ -170,68 +174,61 @@ document.getElementById("between_points").innerHTML = "";
 <select name=selectPair onchange='OnChange(this.form.selectPair);'>
 <option>Select a from/to pair...</option>
 <?php
-  include('spyc/spyc.php');
-  //$timetable = Spyc::YAMLLoad('../spyc.yaml');
-  $path = "maxious-canberra-transit-feed/output/";
-  $dhandle = opendir("maxious-canberra-transit-feed/output/");
-  // define an array to hold the files
-  $files = array();
-  $paths = array();
-  
-  if ($dhandle) {
-      // loop through all of the files
-      while (false !== ($fname = readdir($dhandle))) {
-          if (($fname != '.') && ($fname != '..')) {
-              $timetable = Spyc::YAMLLoad("maxious-canberra-transit-feed/output/" . $fname);
-		// Strip off individual platforms because it usually doesn't matter for routes
-		$timetable["time_points"] = preg_replace("/\(Platform.*/","",$timetable["time_points"]);
-              for ($i = 0; $i < sizeof($timetable["time_points"]) - 1; $i++) {
-		$key = trim($timetable["time_points"][$i]) . "->" . trim($timetable["time_points"][$i + 1]);
-		if (strstr($paths[$key],";" . $timetable["short_name"] . ";") === false)
-                  @$paths[$key] .= $timetable["short_name"] . ";";
-              }
-          }
-      }
-  }
-  ksort($paths);
-  
-  $completedPaths = array();
-  $result_betweenstops = pg_query($conn, "Select * FROM between_stops");
-  while ($path = pg_fetch_assoc($result_betweenstops)) {
-    $key = trim($path['fromlocation']) . "->" . trim($path['tolocation']);
-    $completedPaths[$key].= trim($path['routes']);
-    
-  }
-
- $processed = 0;
-  foreach ($paths as $path => $routes) {
-      if (!in_array($path, array_keys($completedPaths))) {
-          echo "<option value=\"$routes:$path\"> $path ($routes) </option>\n";
-	  $processed++;
-      } else {
-	$completedRoutes = explode(";", $completedPaths[$path]);
-	 $incompleteRoutes = "";
-	foreach (explode(";", $routes) as $route) {
-
-	  if (!in_array($route,$completedRoutes) && strstr($incompleteRoutes,';'.$route.';') === false) {
-	  $incompleteRoutes .= $route.';';
-	  }
-	  
+include ('spyc/spyc.php');
+//$timetable = Spyc::YAMLLoad('../spyc.yaml');
+$path = "maxious-canberra-transit-feed/output/";
+$dhandle = opendir("maxious-canberra-transit-feed/output/");
+// define an array to hold the files
+$files = array();
+$paths = array();
+if ($dhandle) {
+	// loop through all of the files
+	while (false !== ($fname = readdir($dhandle))) {
+		if (($fname != '.') && ($fname != '..')) {
+			$timetable = Spyc::YAMLLoad("maxious-canberra-transit-feed/output/" . $fname);
+			// Strip off individual platforms because it usually doesn't matter for routes
+			$timetable["time_points"] = preg_replace("/\(Platform.*/", "", $timetable["time_points"]);
+			for ($i = 0; $i < sizeof($timetable["time_points"]) - 1; $i++) {
+				$key = trim($timetable["time_points"][$i]) . "->" . trim($timetable["time_points"][$i + 1]);
+				if (strstr(@$paths[$key], ";" . $timetable["short_name"] . ";") === false) @$paths[$key].= $timetable["short_name"] . ";";
+			}
+		}
 	}
-	if ($incompleteRoutes != "") {
-	  echo "<option value=\"$incompleteRoutes:$path\"> $path ($incompleteRoutes) </option>\n";
-	  $processed++;
+}
+ksort($paths);
+$completedPaths = array();
+$result_betweenstops = pg_query($conn, "Select * FROM between_stops");
+while ($path = pg_fetch_assoc($result_betweenstops)) {
+	$key = trim($path['fromlocation']) . "->" . trim($path['tolocation']);
+	$completedPaths[$key].= trim($path['routes']);
+}
+$processed = 0;
+foreach ($paths as $path => $routes) {
+	if (!in_array($path, array_keys($completedPaths))) {
+		echo "<option value=\"$routes:$path\"> $path ($routes) </option>\n";
+		$processed++;
 	}
-      }
-      
-  }
-  echo "</select>$processed";
+	else {
+		$completedRoutes = explode(";", $completedPaths[$path]);
+		$incompleteRoutes = "";
+		foreach (explode(";", $routes) as $route) {
+			if (!in_array($route, $completedRoutes) && strstr($incompleteRoutes, ';' . $route . ';') === false) {
+				$incompleteRoutes.= $route . ';';
+			}
+		}
+		if ($incompleteRoutes != "") {
+			echo "<option value=\"$incompleteRoutes:$path\"> $path ($incompleteRoutes) </option>\n";
+			$processed++;
+		}
+	}
+}
+echo "</select>$processed";
 ?>
  from <input type="text" name="from" id="from"/>
  to <input type="text" name="to" id="to"/>
 <br>
  on routes <input type="text" name="routes" id="routes"/>
-Reverse? <input type="checkbox" name="reverse" id="reverse" checked="true"/> 
+Reverse? <input type="checkbox" name="reverse" id="reverse" checked="false"/> 
 <input type="button" onclick="javascript:submitBetween()" value="Submit!">
 <input type="button" value="Clear" onclick="javascript:clearForms()" title="Start clearForms() JavaScript function">
 <br>
