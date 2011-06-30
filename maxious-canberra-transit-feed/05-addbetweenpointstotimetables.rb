@@ -30,10 +30,16 @@ Dir.glob("*.yml") { |file|
 	#  AND tolocation = '#{searchTo}' AND routes LIKE '%#{route_name};%'"
 	  between_points = connbus.exec("SELECT * from between_stops
 		  WHERE fromlocation = '#{searchFrom}'
-	  AND tolocation = '#{searchTo}' AND routes LIKE '%#{route_name};%'")
+	  AND tolocation = '#{searchTo}' AND (routes LIKE '#{route_name};%' OR  routes LIKE '%;#{route_name};%')")
 	rescue PGError => e
 		puts "Error selecting matching between points from DB #{e}"
 		#conn.close() if conn
+	end
+	if between_points.ntuples() == 0:
+		  print "SELECT * from between_stops
+			  WHERE fromlocation = '#{searchFrom}'
+		  AND tolocation = '#{searchTo}' AND routes LIKE '%#{route_name};%'"
+		raise "no row found"
 	end
 	between_points.each do |between_point_row|
 		points = between_point_row['points'].strip.split(";")
