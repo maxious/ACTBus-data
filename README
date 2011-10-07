@@ -1,0 +1,17 @@
+=== Introduction === 
+
+This distribution contains everything required to build a basic google transit 
+feed for Canberra, Australia. 
+
+Requirements: GNU Make, Perl, Python 2.5, PHP, Ruby, libpq (postgres-devel package on Fedora), postgres,json gem for Ruby, libyaml and pyyaml for Python
+
+
+=== Changes ===
+routes.txt:
+Add short_name,long_name
+Add route_color to match offical line brandings (red/blue/gold/green/brown expresso)
+
+stops.txt:
+Add stop_codes which don't change (GeoPo)
+Add street/suburb to zone_info field
+Set bus station flag on bus stations (stop_type)
