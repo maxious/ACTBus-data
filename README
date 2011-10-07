@@ -3,8 +3,8 @@
 This distribution contains everything required to build a basic google transit 
 feed for Canberra, Australia. 
 
-Requirements: GNU Make, Perl, Python 2.5, PHP, Ruby, libpq (postgres-devel package on Fedora), postgres,json gem for Ruby, libyaml and pyyaml for Python
-
+Requirements: BASH, Python 2.5, PHP, Ruby + ruby-devel, libpq/postgresql-devel, libxml2-devel, libxslt-devel
+Ruby Gems: postgres json nokogiri
 
 === Changes ===
 routes.txt:

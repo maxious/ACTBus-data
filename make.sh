@@ -1,13 +1,11 @@
 #!/bin/bash
-
+mkdir routes
 ruby extract_timetables.rb
 ruby fix_timing_points.rb
 
 wget -c https://www.action.act.gov.au/googletransit/google_transit.zip
 mkdir data 
-unzip google_transit.zip -d data
-
-
+unzip -f google_transit.zip -d data
 
 files=( routes stops feedinfo  )
 

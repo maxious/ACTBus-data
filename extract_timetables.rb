@@ -40,11 +40,7 @@ def makeTimetable(table, period, short_name, pdf_url)
 			time = time.gsub("12:08 AM","1208x").gsub(":","").gsub("1.","1").gsub("2.","2").gsub("3.","3").gsub("4.","4")
 			time = time.gsub("5.","5").gsub("6.","6").gsub("7.","7").gsub("8.","8").gsub("9.","9").gsub("10.","10")
 			time = time.gsub("11.","11").gsub("12.","12").gsub(/\.+/,"-").gsub("\302\240","")
-			if (time == "" 
-				or time.include? "chool" 
-				or time.include? "On Race Days" 
-				or time.include? "Bus" 
-				or time.include? "l") 
+			if (time == "" 	or time.include? "chool" or time.include? "On Race Days" or time.include? "Bus" or time.include? "l") 
 				time = nil # This hacky way is faster than using position()>1 xpath on <TD>s!
 			end 
 			time
@@ -52,26 +48,10 @@ def makeTimetable(table, period, short_name, pdf_url)
 		times.delete(nil)
 		if not times.empty?
 			triproute = times.shift; # strip first column as route number
-			if (triproute == short_name 
-				or triproute.start_with? short_name 
-				or triproute.end_with? short_name 
-				or short_name.start_with? triproute 
-				or short_name.end_with? " "+triproute 
-				or triproute.end_with? "s" 
-				or triproute.end_with? "a" 
-				or triproute.end_with? "x" 
-				or triproute.end_with? "y" 
-				or triproute.end_with? "r")
+			if (triproute == short_name or triproute.start_with? short_name or triproute.end_with? short_name or short_name.start_with? triproute or short_name.end_with? " "+triproute or triproute.end_with? "s" or triproute.end_with? "a" or triproute.end_with? "x" or triproute.end_with? "y" or triproute.end_with? "r")
 			  periodtimes << times.to_a
 			else
-			  if not (triproute == "Notes" 
-				  or triproute == "s" 
-				  or triproute == "S" 
-				  or triproute == "a" 
-				  or triproute == "x" 
-				  or triproute == "y" 
-				  or triproute == "r" 
-				  or short_name == "300")
+			  if not (triproute == "Notes" or triproute == "s" or triproute == "S" or triproute == "a" or triproute == "x" or triproute == "y" or triproute == "r" or short_name == "300")
 			    print short_name + " != " + triproute +"\n"
 			   raise("ERROR: shifting route numbers should only appear on 300 timetable")
 			  end
@@ -120,7 +100,7 @@ def makeTimetable(table, period, short_name, pdf_url)
 	timetable
 end
 
-Dir.glob("source-html/*oute*.htm*") { |file|
+Dir.glob("source-html/*oute_*.htm*") { |file|
 	puts "Opened " + file
 	doc = Nokogiri::HTML(open(file))
 	# Search for nodes by css

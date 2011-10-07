@@ -1,0 +1,13 @@
+source-html/*.htm
+source-html/*.html
+source-html/*.pdf
+source-html/*.jpg
+source-html/*.gif
+source-html/*.css
+source-html/*.asp
+source-html/*.txt
+
+cbrfeed.zip
+data/
+google_transit.zip
+routes/
