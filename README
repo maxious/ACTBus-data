@@ -6,6 +6,26 @@ feed for Canberra, Australia.
 Requirements: BASH, Python 2.5, PHP, Ruby + ruby-devel, libpq/postgresql-devel, libxml2-devel, libxslt-devel
 Ruby Gems: postgres json nokogiri
 
+Suburb Geocoding Based on Australian Bureau of Statistics data.
+
+=== PostGIS setup ===
+Install postGIS, make a new database using postgis template
+From the shell:
+# createdb -T template_postgis my_spatial_db
+From SQL:
+postgres=# CREATE DATABASE my_spatial_db TEMPLATE=template_postgis
+
+Download "State Suburbs ASGS Non ABS Structures Ed 2011 Digital Boundaries 
+in ESRI Shapefile Format" from http://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.003July%202011?OpenDocument
+
+Use shp2pgsql tool http://postgis.refractions.net/documentation/manual-1.3/ch04.html#id2571948
+
+Download OSM ways from XAPI http://open.mapquestapi.com/xapi/
+http://open.mapquestapi.com/xapi/api/0.6/way[highway=*][bbox=148.99,-35.48,149.19,-35.119]
+
+Use tool
+osm2pgsql.exe -d energymapper -U postgres -S "C:\Program Files (x86)\HOTOSM\share\default.style" map.osm 
+
 === Changes ===
 routes.txt:
 Add short_name,long_name
