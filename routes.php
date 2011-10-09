@@ -3,6 +3,7 @@
 $file = "routes.txt";
 $debug = false;
 $line = 0;
+
 $inhandle = fopen("input/" . $file, "r");
 $outhandle = fopen("output/" . $file, "w");
 

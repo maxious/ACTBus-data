@@ -22,6 +22,8 @@ You must provide a Google Maps API key.
 
 
 import BaseHTTPServer, sys, urlparse
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from SocketServer import ForkingMixIn
 import bisect
 from gtfsscheduleviewer.marey_graph import MareyGraph
 import gtfsscheduleviewer
@@ -32,6 +34,7 @@ import signal
 import simplejson
 import socket
 import time
+import datetime
 import transitfeed
 from transitfeed import util
 import urllib
@@ -56,42 +59,21 @@ class ResultEncoder(simplejson.JSONEncoder):
       return list(iterable)
     return simplejson.JSONEncoder.default(self, obj)
 
-# Code taken from
-# http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/425210/index_txt
-# An alternate approach is shown at
-# http://mail.python.org/pipermail/python-list/2003-July/212751.html
-# but it requires multiple threads. A sqlite object can only be used from one
-# thread.
-class StoppableHTTPServer(BaseHTTPServer.HTTPServer):
-  def server_bind(self):
-    BaseHTTPServer.HTTPServer.server_bind(self)
-    self.socket.settimeout(1)
-    self._run = True
-
-  def get_request(self):
-    while self._run:
-      try:
-        sock, addr = self.socket.accept()
-        sock.settimeout(None)
-        return (sock, addr)
-      except socket.timeout:
-        pass
-
-  def stop(self):
-    self._run = False
-
-  def serve(self):
-    while self._run:
-      self.handle_request()
-
+class ForkedHTTPServer(ForkingMixIn, HTTPServer):
+    """Handle requests in a separate forked process."""
 
 def StopToTuple(stop):
   """Return tuple as expected by javascript function addStopMarkerFromList"""
   return (stop.stop_id, stop.stop_name, float(stop.stop_lat),
-          float(stop.stop_lon), stop.location_type)
-
+          float(stop.stop_lon), stop.location_type, stop.stop_code)
+def StopZoneToTuple(stop):
+  """Return tuple as expected by javascript function addStopMarkerFromList"""
+  return (stop.stop_id, stop.stop_name, float(stop.stop_lat),
+          float(stop.stop_lon), stop.location_type, stop.stop_code, stop.zone_id)
 
 class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+  cache = {}
+  
   def do_GET(self):
     scheme, host, path, x, params, fragment = urlparse.urlparse(self.path)
     parsed_params = {}
@@ -111,7 +93,7 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       handler_name = 'handle_json_GET_%s' % m.group(1)
       handler = getattr(self, handler_name, None)
       if callable(handler):
-        return self.handle_json_wrapper_GET(handler, parsed_params)
+        return self.handle_json_wrapper_GET(handler, parsed_params, handler_name)
 
     # Restrict allowable file names to prevent relative path attacks etc
     m = re.match(r'/file/([a-z0-9_-]{1,64}\.?[a-z0-9_-]{1,64})$', path)
@@ -192,8 +174,7 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       self.send_error(404)
       return
     time = int(params.get('time', 0))
-    date = params.get('date', "")
-    sample_size = 3  # For each pattern return the start time for this many trips
+    sample_size = 10  # For each pattern return the start time for this many trips
 
     pattern_id_trip_dict = route.GetPatternIdTripDict()
     patterns = []
@@ -203,23 +184,9 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       if not time_stops:
         continue
       has_non_zero_trip_type = False;
-
-      # Iterating over a copy so we can remove from trips inside the loop
-      trips_with_service = []
       for trip in trips:
-        service_id = trip.service_id
-        service_period = schedule.GetServicePeriod(service_id)
-        
-        if date and not service_period.IsActiveOn(date):
-          continue
-        trips_with_service.append(trip)
-        
         if trip['trip_type'] and trip['trip_type'] != '0':
           has_non_zero_trip_type = True
-
-      # We're only interested in the trips that do run on the specified date
-      trips = trips_with_service
-
       name = u'%s to %s, %d stops' % (time_stops[0][2].stop_name, time_stops[-1][2].stop_name, len(time_stops))
       transitfeed.SortListOfTripByTime(trips)
 
@@ -255,11 +222,22 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     patterns.sort()
     return patterns
 
-  def handle_json_wrapper_GET(self, handler, parsed_params):
+  def handle_json_wrapper_GET(self, handler, parsed_params, handler_name):
     """Call handler and output the return value in JSON."""
     schedule = self.server.schedule
-    result = handler(parsed_params)
-    content = ResultEncoder().encode(result)
+    # round times to nearest 1000 seconds - up to 17 minutes out of date
+    if "time" in parsed_params:
+      parsed_params['time'] = int(round(float(parsed_params['time']),-3))
+    paramkey = tuple(sorted(parsed_params.items()))
+    if handler_name in self.cache and paramkey in self.cache[handler_name] :
+      print ("Cache hit for ",handler_name," params ",parsed_params)
+    else:
+      print ("Cache miss for ",handler_name," params ",parsed_params) 
+      result = handler(parsed_params)
+      if not handler_name in self.cache:
+        self.cache[handler_name] = {}
+      self.cache[handler_name][paramkey] = ResultEncoder().encode(result)
+    content = self.cache[handler_name][paramkey]
     self.send_response(200)
     self.send_header('Content-Type', 'text/plain')
     self.send_header('Content-Length', str(len(content)))
@@ -271,15 +249,63 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     schedule = self.server.schedule
     result = []
     for r in schedule.GetRouteList():
-      result.append( (r.route_id, r.route_short_name, r.route_long_name) )
+      servicep = None
+      for t in schedule.GetTripList():
+        if t.route_id == r.route_id:
+          servicep = t.service_period
+          break
+      result.append( (r.route_id, r.route_short_name, r.route_long_name, servicep.service_id) )
     result.sort(key = lambda x: x[1:3])
     return result
+
+  def handle_json_GET_routesearch(self, params):
+    """Return a list of routes with matching short name."""
+    schedule = self.server.schedule
+    routeshortname = params.get('routeshortname', None)
+    result = []
+    for r in schedule.GetRouteList():
+      if r.route_short_name == routeshortname:
+        servicep = None
+        for t in schedule.GetTripList():
+          if t.route_id == r.route_id:
+            servicep = t.service_period
+            break
+        result.append( (r.route_id, r.route_short_name, r.route_long_name, servicep.service_id) )
+    result.sort(key = lambda x: x[1:3])
+    return result
+
 
   def handle_json_GET_routerow(self, params):
     schedule = self.server.schedule
     route = schedule.GetRoute(params.get('route', None))
     return [transitfeed.Route._FIELD_NAMES, route.GetFieldValuesTuple()]
-
+  
+  def handle_json_GET_routetrips(self, params):
+    """ Get a trip for a route_id (preferablly the next one) """
+    schedule = self.server.schedule
+    query = params.get('route_id', None).lower()
+    result = []
+    for t in schedule.GetTripList():
+      if t.route_id == query:
+        try:
+          starttime = t.GetStartTime()  
+        except:
+          print "Error for GetStartTime of trip #" + t.trip_id + sys.exc_info()[0]
+        else:
+          cursor = t._schedule._connection.cursor()
+          cursor.execute(
+              'SELECT arrival_secs,departure_secs FROM stop_times WHERE '
+              'trip_id=? ORDER BY stop_sequence DESC LIMIT 1', (t.trip_id,))
+          (arrival_secs, departure_secs) = cursor.fetchone()
+          if arrival_secs != None:
+            endtime = arrival_secs
+          elif departure_secs != None:
+            endtime = departure_secs
+          else:
+            endtime =0
+          result.append ( (starttime, t.trip_id, endtime) )
+    return sorted(result, key=lambda trip: trip[2])
+  
   def handle_json_GET_triprows(self, params):
     """Return a list of rows from the feed file that are related to this
     trip."""
@@ -301,11 +327,11 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     except KeyError:
        # if a non-existent trip is searched for, the return nothing
       return
-    time_stops = trip.GetTimeStops()
+    time_stops = trip.GetTimeInterpolatedStops()
     stops = []
     times = []
-    for arr,dep,stop in time_stops:
-      stops.append(StopToTuple(stop))
+    for arr,ts,is_timingpoint in time_stops:
+      stops.append(StopToTuple(ts.stop))
       times.append(arr)
     return [stops, times]
 
@@ -327,14 +353,56 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         points.append((stop.stop_lat, stop.stop_lon))
     return points
 
+#
+# GeoPo Encode in Python
+# @author : Shintaro Inagaki
+# @param location (Dictionary) [lat (Float), lng (Float), scale(Int)]
+# @return geopo (String)
+#
+     
   def handle_json_GET_neareststops(self, params):
     """Return a list of the nearest 'limit' stops to 'lat', 'lon'"""
     schedule = self.server.schedule
     lat = float(params.get('lat'))
     lon = float(params.get('lon'))
-    limit = int(params.get('limit'))
-    stops = schedule.GetNearestStops(lat=lat, lon=lon, n=limit)
-    return [StopToTuple(s) for s in stops]
+    limit = int(params.get('limit',5))
+    scale = int(params.get('scale',5)) # 5 = neighbourhood ~ 1km, 4= town 5 by 7km
+    stops = []
+    
+    # 64characters (number + big and small letter + hyphen + underscore)
+    chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_"
+
+    geopo = ""
+
+    # Change a degree measure to a decimal number
+    lat = (lat + 90.0) / 180 * 8 ** 10 # 90.0 is forced FLOAT type when lat is INT
+    lon = (lon + 180.0) / 360 * 8 ** 10 # 180.0 is same
+
+       # Compute a GeoPo code from head and concatenate
+    for i in range(scale):
+            order = int(lat / (8 ** (9 - i)) % 8) + int(lon / (8 ** (9 - i)) % 8) * 8
+            geopo = geopo + chars[order]
+
+    
+    for s in schedule.GetStopList():
+      if s.stop_code.find(geopo) != -1:
+        stops.append(s)
+        
+    if scale == 5:
+      print stops
+      return [StopToTuple(s) for s in stops]
+    else:
+      dist_stop_list = []
+      for s in stops:
+      # TODO: Use util.ApproximateDistanceBetweenStops?
+        dist = (s.stop_lat - lat)**2 + (s.stop_lon - lon)**2
+        if len(dist_stop_list) < limit:
+          bisect.insort(dist_stop_list, (dist, s))
+        elif dist < dist_stop_list[-1][0]:
+          bisect.insort(dist_stop_list, (dist, s))
+          dist_stop_list.pop()  # Remove stop with greatest distance
+      print dist_stop_list
+      return [StopToTuple(s) for dist, s in dist_stop_list]
 
   def handle_json_GET_boundboxstops(self, params):
     """Return a list of up to 'limit' stops within bounding box with 'n','e'
@@ -349,45 +417,97 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     stops = schedule.GetStopsInBoundingBox(north=n, east=e, south=s, west=w, n=limit)
     return [StopToTuple(s) for s in stops]
 
+  def handle_json_GET_stops(self, params):
+    schedule = self.server.schedule
+    return [StopToTuple(s) for s in schedule.GetStopList()]
+    
+  def handle_json_GET_timingpoints(self, params):
+    schedule = self.server.schedule
+    matches = []
+    for s in schedule.GetStopList():
+      if s.stop_code.find("Wj") == -1:
+        matches.append(StopToTuple(s))
+    return matches
+
   def handle_json_GET_stopsearch(self, params):
     schedule = self.server.schedule
     query = params.get('q', None).lower()
     matches = []
     for s in schedule.GetStopList():
-      if s.stop_id.lower().find(query) != -1 or s.stop_name.lower().find(query) != -1:
+      if s.stop_name.lower().find(query) != -1 or s.stop_code.lower().find(query) != -1:
         matches.append(StopToTuple(s))
     return matches
 
-  def handle_json_GET_stoptrips(self, params):
-    """Given a stop_id and time in seconds since midnight return the next
-    trips to visit the stop."""
+  def handle_json_GET_stopnamesearch(self, params):
+    schedule = self.server.schedule
+    query = params.get('q', None).lower()
+    matches = []
+    for s in schedule.GetStopList():
+      if s.stop_name.lower().find(query) != -1:
+        matches.append(StopToTuple(s))
+    return matches
+  
+  def handle_json_GET_stopcodesearch(self, params):
+    schedule = self.server.schedule
+    query = params.get('q', None).lower()
+    matches = []
+    for s in schedule.GetStopList():
+      if s.stop_code.lower().find(query) != -1:
+        matches.append(StopToTuple(s))
+    return matches
+
+  def handle_json_GET_stopzonesearch(self, params):
+    schedule = self.server.schedule
+    query = params.get('q', None).lower()
+    matches = []
+    for s in schedule.GetStopList():
+      if s.zone_id != None and s.zone_id.lower().find(query) != -1:
+        matches.append(StopToTuple(s))
+    return matches
+
+  def handle_json_GET_stop(self, params):
+    schedule = self.server.schedule
+    query = params.get('stop_id', None).lower()
+    for s in schedule.GetStopList():
+      if s.stop_id.lower() == query:
+        return StopToTuple(s)
+    return []
+    
+  def handle_json_GET_stoproutes(self, params):
+    """Given a stop_id return all routes to visit the stop."""
     schedule = self.server.schedule
     stop = schedule.GetStop(params.get('stop', None))
-    time = int(params.get('time', 0))
-    date = params.get('date', "")
-     
-    time_trips = stop.GetStopTimeTrips(schedule)
-    time_trips.sort()  # OPT: use bisect.insort to make this O(N*ln(N)) -> O(N)
-    # Keep the first 5 after param 'time'.
-    # Need make a tuple to find correct bisect point
-    time_trips = time_trips[bisect.bisect_left(time_trips, (time, 0)):]
-    time_trips = time_trips[:5]
-    # TODO: combine times for a route to show next 2 departure times
+    service_period = params.get('service_period', None)
+    trips = stop.GetTrips(schedule)
+    result = {}
+    for trip in trips:
+      route = schedule.GetRoute(trip.route_id)
+      if service_period == None or trip.service_id == service_period:
+        if not route.route_short_name+route.route_long_name+trip.service_id in result:
+          result[route.route_short_name+route.route_long_name+trip.service_id] = (route.route_id, route.route_short_name, route.route_long_name, trip.trip_id, trip.service_id)
+    return result
+    
+  def handle_json_GET_stopalltrips(self, params):
+    """Given a stop_id return all trips to visit the stop (without times)."""
+    schedule = self.server.schedule
+    stop = schedule.GetStop(params.get('stop', None))
+    service_period = params.get('service_period', None)
+    trips = stop.GetTrips(schedule)
+    result = []
+    for trip in trips:
+      if service_period == None or trip.service_id == service_period:
+        result.append((trip.trip_id, trip.service_id))
+    return result
+  
+  def handle_json_GET_stopalltriptimes(self, params):
+    """Given a stop_id return all trips to visit the stop (with times).
+    DEPRECIATED?"""
+    schedule = self.server.schedule
+    stop = schedule.GetStop(params.get('stop', None))
+    service_period = params.get('service_period', None)
+    time_trips = stop.GetStopTrips(schedule)
     result = []
     for time, (trip, index), tp in time_trips:
-      service_id = trip.service_id
-      service_period = schedule.GetServicePeriod(service_id)
-      if date and not service_period.IsActiveOn(date):
-        continue
-      headsign = None
-      # Find the most recent headsign from the StopTime objects
-      for stoptime in trip.GetStopTimes()[index::-1]:
-        if stoptime.stop_headsign:
-          headsign = stoptime.stop_headsign
-          break
-      # If stop_headsign isn't found, look for a trip_headsign
-      if not headsign:
-        headsign = trip.trip_headsign
       route = schedule.GetRoute(trip.route_id)
       trip_name = ''
       if route.route_short_name:
@@ -396,10 +516,43 @@ class ScheduleRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if len(trip_name):
           trip_name += " - "
         trip_name += route.route_long_name
-      if headsign:
-        trip_name += " (Direction: %s)" % headsign
+      if service_period == None or trip.service_id == service_period:
+        result.append((time, (trip.trip_id, trip_name, trip.service_id), tp))
+    return result
+  
 
-      result.append((time, (trip.trip_id, trip_name, trip.service_id), tp))
+
+  def handle_json_GET_stoptrips(self, params):
+    """Given a stop_id and time in seconds since midnight return the next
+    trips to visit the stop."""
+    schedule = self.server.schedule
+    stop = schedule.GetStop(params.get('stop', None))
+    requested_time = int(params.get('time', 0))
+    limit = int(params.get('limit', 15))
+    service_period = params.get('service_period', None)
+    time_range = int(params.get('time_range', 24*60*60))
+    
+    filtered_time_trips = []
+    for trip, index in stop._GetTripIndex(schedule):
+      tripstarttime = trip.GetStartTime()
+      if tripstarttime > requested_time and tripstarttime < (requested_time + time_range):
+        time, stoptime, tp = trip.GetTimeInterpolatedStops()[index]
+        if time > requested_time and time < (requested_time + time_range):
+          bisect.insort(filtered_time_trips, (time, (trip, index), tp))
+    result = []
+    for time, (trip, index), tp in filtered_time_trips:
+      if len(result) > limit:
+        break
+      route = schedule.GetRoute(trip.route_id)
+      trip_name = ''
+      if route.route_short_name:
+        trip_name += route.route_short_name
+      if route.route_long_name:
+        if len(trip_name):
+          trip_name += " - "
+        trip_name += route.route_long_name
+      if service_period == None or trip.service_id == service_period:
+        result.append((time, (trip.trip_id, trip_name, trip.service_id), tp))
     return result
 
   def handle_GET_ttablegraph(self,params):
@@ -483,9 +636,6 @@ Runs a webserver that lets you explore a <input GTFS.zip> in your browser.
 
 If <input GTFS.zip> is omited the filename is read from the console. Dragging
 a file into the console may enter the filename.
-
-For more information see
-http://code.google.com/p/googletransitdatafeed/wiki/ScheduleViewer
 '''
   parser = util.OptionParserLongError(
       usage=usage, version='%prog '+transitfeed.__version__)
@@ -524,19 +674,21 @@ http://code.google.com/p/googletransitdatafeed/wiki/ScheduleViewer
 
   if options.key and os.path.isfile(options.key):
     options.key = open(options.key).read().strip()
-
+  
   schedule = transitfeed.Schedule(problem_reporter=transitfeed.ProblemReporter())
   print 'Loading data from feed "%s"...' % options.feed_filename
   print '(this may take a few minutes for larger cities)'
+  t0 = datetime.datetime.now()
   schedule.Load(options.feed_filename)
-
-  server = StoppableHTTPServer(server_address=('', options.port),
+  print ("Loaded in", (datetime.datetime.now() - t0).seconds , "seconds")
+  server = ForkedHTTPServer(server_address=('', options.port),
                                RequestHandlerClass=RequestHandlerClass)
   server.key = options.key
   server.schedule = schedule
   server.file_dir = options.file_dir
   server.host = options.host
-  server.feed_path = options.feed_filename
+  server.feed_path = options.feed_filename  
+
 
   print ("To view, point your browser at http://localhost:%d/" %
          (server.server_port))
