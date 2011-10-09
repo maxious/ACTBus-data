@@ -39,6 +39,8 @@ osm2pgsql -d bus -U postgres cbrroads.osm
 === Running ===
 run get.sh in source-html to get html timetables
 run make.sh to get GTFS timetables and enchance them
+use compile_gtfs from https://github.com/kurtraschke/gtfs if you want a sqlite version
+use http://code.google.com/p/gtfsdb/ if you want sql/python geo-alchemy version
 
 === Changes ===
 routes.txt:
