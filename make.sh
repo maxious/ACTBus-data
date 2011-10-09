@@ -10,7 +10,7 @@ unzip google_transit.zip -d input
 mkdir output
 cp input/* output
 
-files=( routes stops fare_attributes feed_info agency )
+files=( routes stops stop_times fare_attributes feed_info agency )
 
 for file in ${files[@]}
 do
