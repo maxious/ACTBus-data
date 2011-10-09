@@ -6,12 +6,8 @@ import sys
 import re
 
 def clean_name(name):
-    m = re.search('^\b[a-zA-Z]+\b \b[a-zA-Z]+\b \b[a-zA-Z]+\b',name)
-    name = m.group(0)
-    name = name.replace("from","")
-    name = name.replace("after","")
-    name = name.replace("Bus","Bus Station")
-    return name
+    nparts = name.split()
+    return nparts[0] + " " + nparts[1] + " " + nparts[2] 
 
 def main():
   feed_filename = sys.argv[1]
@@ -30,9 +26,9 @@ def main():
             tostop = clean_name(time_stops[-1][2].stop_name)
 
             r.route_long_name = u'%s to %s' % (fromstop, tostop)
-            print r.route_long_name
+            #print r.route_long_name
         if r.route_long_name != "":
             break
-  #schedule.WriteGoogleTransitFeed(feed_filename)
+  schedule.WriteGoogleTransitFeed(feed_filename)
 if __name__ == '__main__':
   main()

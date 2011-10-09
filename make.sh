@@ -5,6 +5,7 @@ ruby fix_timing_points.rb
 
 wget -c https://www.action.act.gov.au/googletransit/google_transit.zip
 mkdir input 
+python long_name_writer.py google_transit.zip
 unzip google_transit.zip -d input
 mkdir output
 cp input/* output

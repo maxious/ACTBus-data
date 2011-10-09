@@ -1,5 +1,21 @@
 <?php
-
+function clean_name($name) {
+    $name = str_replace(Array("from","before","after","opp","Service","Platform"),"",$name);
+    $name = str_replace("Pk","Park",$name);
+    $name = str_replace("Dr ","Drive ",$name);    
+    $name = str_replace("Drive","Drive ",$name);
+    $name = str_replace("Rd","Road",$name);
+    $name = str_replace("Cr","Crescent",$name);
+    $name = str_replace("Cct ","Circuit ",$name);
+    $name = str_replace("Circuit","Circuit ",$name);
+    $name = str_replace("Av ","Avenue ",$name);
+    $name = str_replace("Avenue","Avenue ",$name);
+    $name = str_replace("Bus","Bus Station",$name);
+    $name = str_replace("Station Station","Station",$name);
+    $name = str_replace("Station Station","Station",$name);
+    $name = str_replace("  "," ",$name);
+    return trim($name);
+}
 $file = "routes.txt";
 $debug = false;
 $line = 0;
@@ -25,6 +41,7 @@ if ($inhandle && $outhandle) {
                 }
                 echo "---\n";
             }
+            $data[array_search("route_long_name", $headers)] = clean_name($data[array_search("route_long_name", $headers)]);
             $data[array_search("route_text_color", $headers)] = "000000";
             $data[array_search("route_color", $headers)] = "FFFFFF"; #default  black on white
             switch ($data[array_search("route_short_name", $headers)]) {
