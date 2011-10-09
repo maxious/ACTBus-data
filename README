@@ -19,6 +19,10 @@ postgres=# CREATE DATABASE my_spatial_db TEMPLATE=template_postgis
 Or upgrade existing database to postgis
 psql -d bus < /usr/share/pgsql/contrib/postgis-1.5/postgis.sql 
 
+Make sure it has SRID 4326 (WGS84) and SRID 900913
+INSERT INTO spatial_ref_sys (srid, auth_name, auth_srid, srtext, proj4text)VALUES (900913,'EPSG',900913,'PROJCS["WGS84 / Simple Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS_1984", 6378137.0, 298.257223563]],PRIMEM["Greenwich", 0.0],UNIT["degree", 0.017453292519943295],AXIS["Longitude", EAST],AXIS["Latitude", NORTH]],PROJECTION["Mercator_1SP_Google"],PARAMETER["latitude_of_origin", 0.0],PARAMETER["central_meridian", 0.0],PARAMETER["scale_factor", 1.0],PARAMETER["false_easting", 0.0],PARAMETER["false_northing", 0.0],UNIT["m", 1.0],AXIS["x", EAST],AXIS["y", NORTH],AUTHORITY["EPSG","900913"]]','+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs');
+INSERT INTO spatial_ref_sys ( auth_name, auth_srid, srid, proj4text ) VALUES ( 'EPSG', 4326, 4326, '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs' );
+
 Download "State Suburbs ASGS Non ABS Structures Ed 2011 Digital Boundaries 
 in ESRI Shapefile Format" from http://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.003July%202011?OpenDocument
 
@@ -30,7 +34,6 @@ Download OSM ways from XAPI http://open.mapquestapi.com/xapi/
 http://open.mapquestapi.com/xapi/api/0.6/way[highway=*][bbox=148.99,-35.48,149.19,-35.119]
 
 Use tool from http://wiki.openstreetmap.org/wiki/Osm2pgsql (or another OSM import tool like osmosis)
-psql -d bus < /tmp/osm2pgsql/900913.sql // install projection SRID for openstreetmap
 osm2pgsql -d bus -U postgres cbrroads.osm 
 
 === Running ===

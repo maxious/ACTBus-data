@@ -8,7 +8,12 @@ source-html/*.asp
 source-html/*.txt
 
 cbrfeed.zip
-data/
 google_transit.zip
 routes/
 /nbproject/private/
+cbrroads.osm
+input/
+output/
+suburbs.sql
+validation-results.html
+
