@@ -25,7 +25,7 @@ def main():
             fromstop = clean_name(time_stops[0][2].stop_name)
             tostop = clean_name(time_stops[-1][2].stop_name)
 
-            r.route_long_name = u'%s to %s' % (fromstop, tostop)
+            r.route_long_name = u'Between %s and %s' % (fromstop, tostop)
             #print r.route_long_name
         if r.route_long_name != "":
             break
