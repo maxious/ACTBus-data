@@ -30,7 +30,7 @@ if ($inhandle && $outhandle) {
         if ($line == 0) {
             $headers = $data;
             // add additional fields
-            $headers = array_merge($headers, Array("route_text_color", "route_color"));
+            $headers = array_merge($headers, Array("route_text_color", "route_color", "agency_id"));
             // save
             fputcsv($outhandle, $headers);
         } else {
@@ -69,7 +69,7 @@ if ($inhandle && $outhandle) {
             if (preg_match("/^7../", $data[array_search("route_short_name", $headers)])) {
                 $data[array_search("route_color", $headers)] = "845730"; #Xpresso line
             }
-            
+            $data[array_search("agency_id", $headers)] = "0";
                           if ($debug) {
                 foreach ($data as $key => $value) {
                     echo "$line: {$headers[$key]} => $value \n";
