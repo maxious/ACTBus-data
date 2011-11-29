@@ -42,6 +42,13 @@ if (!$conn) {
 }
 $file = "stops.txt";
 $debug = false;
+// load merged stop operations
+$mergeoperationshandle = fopen("tmp/merge.operations.txt", "r");
+if ($mergeoperationshandle) {
+    while (($data = fgetcsv($stopshandle, 1000, ",")) !== FALSE) {
+    $deleteStops = $data[1]; // delete stops that are no longer referenced in stop_times
+    }
+}
 $line = 0;
 $inhandle = fopen("input/" . $file, "r");
 $outhandle = fopen("output/" . $file, "w");
@@ -56,6 +63,8 @@ if ($inhandle) {
             $headers = array_merge($headers, Array());
             // save
             fputcsv($outhandle, $headers);
+        } else if (in_array($data[array_search("stop_lon", $headers)], $deleteStops)) {
+            echo "Skipping stop id ".$data[array_search("stop_lon", $headers)]." because it is a redundant duplicate for name ".$data[array_search("stop_name", $headers)]."\n";
         } else {
             if ($debug) {
                 echo "------\n";

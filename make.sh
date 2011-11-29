@@ -9,8 +9,9 @@ python long_name_writer.py google_transit.zip
 unzip google_transit.zip -d input
 mkdir output
 cp input/* output
+mkdir tmp
 
-files=( routes stops stop_times fare_attributes feed_info agency )
+files=(calendar calendar_dates routes trips stop_times stops fare_attributes feed_info agency )
 
 for file in ${files[@]}
 do

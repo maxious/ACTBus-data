@@ -5,6 +5,7 @@ $replaceStations = Array();
 $stationStopIDs = Array();
 
 $stopshandle = fopen("input/stops.txt", "r");
+$mergeoperationshandle = fopen("tmp/merge.operations.txt", "w");
 $line = 0;
 echo "Processing stops to remove duplicates \n";
 $headers = Array();
@@ -22,7 +23,8 @@ if ($stopshandle) {
                     if ($debug) echo "$stopName is $stopID from now on\n";
                 } else {
                     $replaceStations[$stopID] = $stationStopIDs[$stopName];
-                    
+                    // type, from, to
+                      fputcsv($mergeoperationshandle, array("stop",$stopID,$stationStopIDs[$stopName]));
                     if ($debug) echo "$stopName @ $stopID is a duplicate of {$stationStopIDs[$stopName]}\n";
                 }
             }
