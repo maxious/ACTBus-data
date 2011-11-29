@@ -2,7 +2,7 @@
 
 include 'common.inc.php';
 $file = "calendar.txt";
-$debug = false;
+$debug = true;
 $line = 0;
 
 $inhandle = fopen("input/" . $file, "r");
@@ -46,5 +46,7 @@ if ($inhandle && $outhandle) {
 } else {
     echo "Error opening $file";
 }
+fclose($inhandle);
+fclose($outhandle);
 ?>
 
