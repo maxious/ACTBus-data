@@ -11,7 +11,7 @@ mkdir output
 cp input/* output
 mkdir tmp
 
-files=(calendar calendar_dates routes trips stop_times stops fare_attributes feed_info agency )
+files=(calendar calendar_dates routes trips stop_times shapes stops fare_attributes feed_info agency )
 
 for file in ${files[@]}
 do

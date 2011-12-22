@@ -7,7 +7,7 @@ $line = 0;
 
 $inhandle = fopen("input/" . $file, "r");
 $outhandle = fopen("output/" . $file, "w");
-echo "Processing $file \n";
+echo "Processing $file <br>\n";
 $headers = Array();
 if ($inhandle && $outhandle) {
     while (($data = fgetcsv($inhandle, 1000, ",")) !== FALSE) {
@@ -19,23 +19,23 @@ if ($inhandle && $outhandle) {
             fputcsv($outhandle, $headers);
         } else {
             if ($debug) {
-                echo "------\n";
+                echo "------<br>\n";
                 foreach ($data as $key => $value) {
-                    echo "$line: {$headers[$key]} => $value \n";
+                    echo "$line: {$headers[$key]} => $value <br>\n";
                 }
-                echo "---\n";
+                echo "---<br>\n";
             }
             $data[array_search("service_id", $headers)] = cleanServiceID($data[array_search("service_id", $headers)]);
 
             if ($debug) {
                 foreach ($data as $key => $value) {
-                    echo "$line: {$headers[$key]} => $value \n";
+                    echo "$line: {$headers[$key]} => $value <br>\n";
                 }
-                echo "\n";
+                echo "<br>\n";
             } else {
                 echo ".";
                 if ($line % 100 == 0)
-                    echo "$line\n";
+                    echo "$line<br>\n";
             }
             // save
             fputcsv($outhandle, $data);

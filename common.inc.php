@@ -33,10 +33,14 @@ function geopoEncode($lat, $lng) {
 }
 
 function cleanServiceID($serviceID){
-    if (strpos($serviceID, "MAST-Weekday")) return "Weekday";
-    if (strpos($serviceID, "SVac-Weekday")) return "WeekdaySchoolVacation";
+    
+    
+    if (strpos($serviceID, "Vac-Weekday")) return "Weekday-SchoolVacation";
         if (strpos($serviceID, "SAT-Saturday")) return "Saturday";
         if (strpos($serviceID, "SUN-Sunday")) return "Sunday";
+        if (strpos($serviceID, "xmas2011")) return "Christmas2011";
+        if (strpos($serviceID, "MAST-Weekday")) return "Weekday";
+        if (strpos($serviceID, "3DXS-Weekday")) return "Weekday-EndOfYearHolidays";
         die("Unknown service ID $serviceID");
 }
 
