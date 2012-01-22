@@ -80,6 +80,7 @@ $data[array_search("shape_dist_traveled", $headers)] = $distance;
     }
 } else {
     echo "Error opening $file";
+    exit(1);
 }
 ?>
 

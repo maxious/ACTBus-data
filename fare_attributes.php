@@ -12,6 +12,7 @@ if ($outhandle) {
             fputcsv($outhandle, $data);
 } else {
     echo "Error opening $file";
+    exit(1);
 }
 
 ?>

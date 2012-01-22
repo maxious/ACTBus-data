@@ -1,11 +1,11 @@
 #!/bin/bash
 mkdir routes
-ruby extract_timetables.rb
-ruby fix_timing_points.rb
+#ruby extract_timetables.rb
+#ruby fix_timing_points.rb
 
 wget -c https://www.action.act.gov.au/googletransit/google_transit.zip
 mkdir input 
-python long_name_writer.py google_transit.zip
+#python long_name_writer.py google_transit.zip
 unzip google_transit.zip -d input
 mkdir output
 cp input/* output
@@ -17,7 +17,8 @@ for file in ${files[@]}
 do
 	echo $file
 	php $file.php
-	if [ $? -eq 0 ] ; then
+        echo $?
+	if [ $? -gt 0 ] ; then
 		echo "$file.txt processing failed"
 		exit 1
 	fi

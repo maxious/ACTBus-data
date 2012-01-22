@@ -34,6 +34,7 @@ if ($stopshandle) {
     }
 } else {
     echo "Error opening stops for dupe removal";
+    exit(1);
 }
 $file = "stop_times.txt";
 $line = 0;
@@ -82,6 +83,7 @@ if ($inhandle) {
     }
 } else {
     echo "Error opening $file";
+    exit(1);
 }
 ?>
 

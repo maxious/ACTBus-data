@@ -46,6 +46,7 @@ if ($inhandle && $outhandle) {
     }
 } else {
     echo "Error opening $file";
+    exit(1);
 }
 ?>
 

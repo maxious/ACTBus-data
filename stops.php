@@ -6,8 +6,8 @@ include 'common.inc.php';
 // http://developers.cloudmade.com/wiki/geocoding-http-api/Documentation
 $conn = pg_connect("dbname=bus user=postgres password=snmc");
 if (!$conn) {
-    echo "An error occured.\n";
-    exit;
+    echo "An error occurred connecting to database.\n";
+    exit(1);
 }
 $file = "stops.txt";
 $debug = false;
@@ -46,10 +46,11 @@ if ($inhandle) {
                 $data[array_search("stop_code", $headers)] = geopoEncode($data[array_search("stop_lat", $headers)], $data[array_search("stop_lon", $headers)]);
             }
             if ($data[array_search("stop_desc", $headers)] == "") {
-                $sql = "select name from planet_osm_line where name != '' ORDER BY ST_Distance(way,ST_Transform(GeomFromText('POINT(" . $data[array_search("stop_lon", $headers)] . " " . $data[array_search("stop_lat", $headers)] . ")',4326),900913)) limit 1";
+                $sql = "select name from planet_osm_line where name != '' ORDER BY ST_Distance(way,ST_Transform(ST_GeomFromText('POINT(" . $data[array_search("stop_lon", $headers)] . " " . $data[array_search("stop_lat", $headers)] . ")',4326),900913)) limit 1";
                 $result_street = pg_query($conn, $sql);
                 if (!$result_street) {
                     echo("Error in SQL query: " . pg_last_error() . "<br>\n");
+                    exit(1);
                 }
                 $street_row = pg_fetch_row($result_street);
                 $street = $street_row[0];
@@ -89,6 +90,7 @@ if ($inhandle) {
     }
 } else {
     echo "Error opening $file";
+    exit(1);
 }
 ?>
 
