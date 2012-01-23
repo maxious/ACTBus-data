@@ -9,7 +9,7 @@ if ($outhandle) {
             $headers = Array("feed_publisher_name","feed_publisher_url","feed_lang","feed_start_date","feed_end_date","feed_version");
             fputcsv($outhandle, $headers);
             
-            $data = Array("bus.lambdacomplex.org","http://bus.lambdacomplex.org","en-au","20111208","20120204",date("c")); 
+            $data = Array("bus.lambdacomplex.org","http://bus.lambdacomplex.org","en-au","20111231","20120409",date("c")); 
             fputcsv($outhandle, $data);
 } else {
     echo "Error opening $file";
