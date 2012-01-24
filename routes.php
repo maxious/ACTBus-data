@@ -56,6 +56,7 @@ if ($inhandle && $outhandle) {
                 if (preg_match("/^7../", $data[array_search("route_short_name", $headers)])) {
                     $data[array_search("route_color", $headers)] = "845730"; #Xpresso line
                 }
+                if ($data[array_search("route_short_name", $headers)] == "23:59:59") $data[array_search("route_short_name", $headers)] = 24;
                 $data[array_search("agency_id", $headers)] = "0";
                 if ($debug) {
                     foreach ($data as $key => $value) {
