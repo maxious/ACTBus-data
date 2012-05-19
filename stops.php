@@ -4,7 +4,7 @@ include 'common.inc.php';
 
 // 
 // http://developers.cloudmade.com/wiki/geocoding-http-api/Documentation
-$conn = pg_connect("dbname=bus user=postgres password=snmc");
+$conn = pg_connect("host=localhost dbname=bus user=postgres password=snmc");
 if (!$conn) {
     echo "An error occurred connecting to database.\n";
     exit(1);

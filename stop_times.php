@@ -71,6 +71,7 @@ if ($inhandle) {
                 }
                 echo "\n";
             } else {
+                if ($line % 1000 == 0)
                 echo ".";
                 if ($line % 10000 == 0)
                     echo "$line\n";
