@@ -72,7 +72,8 @@ if ($inhandle) {
                 }
                 $data[array_search("stop_desc", $headers)] = "Street: $street<br>Suburb: $suburbs";
             }
-
+$data[array_search("stop_lon", $headers)] = trim($data[array_search("stop_lon", $headers)]);
+        $data[array_search("stop_lat", $headers)] = trim($data[array_search("stop_lat", $headers)]);
             if ($debug) {
                 foreach ($data as $key => $value) {
                     echo "$line: {$headers[$key]} => $value \n";
