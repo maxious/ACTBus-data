@@ -18,6 +18,7 @@ if ($mergeoperationshandle) {
     $deleteStops[] = $data[1]; // delete stops that are no longer referenced in stop_times
     }
 }
+$usedGeoCodes = Array();
 $line = 0;
 $inhandle = fopen("input/" . $file, "r");
 $outhandle = fopen("output/" . $file, "w");
@@ -43,7 +44,10 @@ if ($inhandle) {
                 echo "---\n";
             }
             if ($data[array_search("stop_code", $headers)] == "") {
-                $data[array_search("stop_code", $headers)] = geopoEncode($data[array_search("stop_lat", $headers)], $data[array_search("stop_lon", $headers)]);
+                $newgeopo = geopoEncode($data[array_search("stop_lat", $headers)], $data[array_search("stop_lon", $headers)]);
+                if (in_array($newgeopo, $usedGeoCodes)) die ("duplicate geopo ".$newgeopo);
+                $data[array_search("stop_code", $headers)] = $newgeopo;
+                $usedGeoCodes[] = $newgeopo;
             }
             if ($data[array_search("stop_desc", $headers)] == "") {
                 $sql = "select name from planet_osm_line where name != '' ORDER BY ST_Distance(way,ST_Transform(ST_GeomFromText('POINT(" . $data[array_search("stop_lon", $headers)] . " " . $data[array_search("stop_lat", $headers)] . ")',4326),900913)) limit 1";

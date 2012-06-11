@@ -20,7 +20,7 @@ function geopoEncode($lat, $lng) {
     $chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
 
     $geopo = "";
-    $scale = 7;
+    $scale = 8;
 
     // Change a degree measure to a decimal number
     $lat = ($lat + 90) / 180 * pow(8, 10);
