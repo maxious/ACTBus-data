@@ -8,30 +8,6 @@ function getPage($url) {
     return $page;
 }
 
-/*
- * GeoPo Encode in PHP
- * @author : Shintaro Inagaki
- * @param $location (Array)
- * @return $geopo (String)
- */
-
-function geopoEncode($lat, $lng) {
-    // 64characters (number big and small letter hyphen underscore)
-    $chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
-
-    $geopo = "";
-    $scale = 8;
-
-    // Change a degree measure to a decimal number
-    $lat = ($lat + 90) / 180 * pow(8, 10);
-    $lng = ($lng + 180) / 360 * pow(8, 10);
-    // Compute a GeoPo code from head and concatenate
-    for ($i = 0; $i < $scale; $i++) {
-        $geopo .= substr($chars, floor($lat / pow(8, 9 - $i) % 8) + floor($lng / pow(8, 9 - $i) % 8) * 8, 1);
-    }
-    return $geopo;
-}
-
 function cleanServiceID($serviceID){
     
     
