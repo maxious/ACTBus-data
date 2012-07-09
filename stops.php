@@ -80,8 +80,10 @@ $data[array_search("stop_lon", $headers)] = trim($data[array_search("stop_lon", 
                 }
                 echo "\n";
             } else {
+                 if ($line % 10 == 0)
                 echo ".";
-                if ($line %100 == 0) echo "$line\n";
+                if ($line % 100 == 0)
+                    echo "$line\n";
             }
             // save
             fputcsv($outhandle, $data);

@@ -68,8 +68,9 @@ $data[array_search("shape_dist_traveled", $headers)] = $distance;
                 }
                 echo "\n";
             } else {
-                echo ".";
                 if ($line % 100 == 0)
+                echo ".";
+                if ($line % 1000 == 0)
                     echo "$line\n";
             }
             // save
