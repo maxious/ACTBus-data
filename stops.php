@@ -42,6 +42,16 @@ if ($inhandle) {
                 }
                 echo "---\n";
             }
+            // HACKHACKHACK special cases
+            if ($data[array_search("stop_id", $headers)] == "5501") {
+                // "Westfield Belconnen Bus Station"
+                $data[array_search("stop_name", $headers)] = "Westfield Bus Station Platform 1";
+            }
+            if ($data[array_search("stop_id", $headers)] == "5503") {
+                // "Westfield Bus Station Set Down Only" or "Westfield Shopping Centre Set Down Only"
+                $data[array_search("stop_name", $headers)] = "Westfield Bus Station Platform 2";
+            }
+            
             if ($data[array_search("stop_code", $headers)] == "") {
                 $data[array_search("stop_code", $headers)] = $data[array_search("stop_id", $headers)];
             }
